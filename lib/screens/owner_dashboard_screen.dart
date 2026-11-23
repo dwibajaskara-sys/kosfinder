@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../models/kos.dart';
 import '../providers/auth_provider.dart';
 import '../providers/owner_kos_provider.dart';
 import 'kos_form_screen.dart';
@@ -44,10 +45,38 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
-  void _showPlaceholder(String feature) {
+  Future<void> _confirmDeleteKos(Kos kos) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        content: Text(
+          'Hapus kos ${kos.nama}? Tindakan ini tidak bisa dibatalkan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final provider = context.read<OwnerKosProvider>();
+    final deleted = await provider.deleteKos(kos);
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Fitur $feature akan tersedia pada task berikutnya.'),
+        content: Text(
+          deleted
+              ? 'Kos berhasil dihapus'
+              : provider.errorMessage ?? 'Gagal menghapus kos.',
+        ),
       ),
     );
   }
@@ -181,7 +210,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                     ),
                     TextButton.icon(
                       key: ValueKey('delete-${kos.id}'),
-                      onPressed: () => _showPlaceholder('hapus kos'),
+                      onPressed: () => _confirmDeleteKos(kos),
                       icon: const Icon(Icons.delete_outline),
                       label: const Text('Hapus'),
                     ),

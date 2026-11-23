@@ -13,6 +13,8 @@ class FakeKosRepository extends KosRepository {
   Object? failure;
   Kos? updatedKos;
   Object? updateFailure;
+  String? deletedKosId;
+  Object? deleteFailure;
 
   @override
   Future<List<Kos>> getOwnerKosList(String pemilikId) async {
@@ -29,6 +31,13 @@ class FakeKosRepository extends KosRepository {
     final index = kosList.indexWhere((item) => item.id == kos.id);
     if (index >= 0) kosList[index] = kos;
     return kos;
+  }
+
+  @override
+  Future<void> deleteKos(String kosId) async {
+    deletedKosId = kosId;
+    if (deleteFailure case final error?) throw error;
+    kosList.removeWhere((kos) => kos.id == kosId);
   }
 }
 
@@ -159,6 +168,41 @@ void main() {
         expect(provider.state, OwnerKosState.error);
         expect(provider.hasError, isTrue);
         expect(provider.errorMessage, 'Anda tidak berhak mengubah kos ini');
+      },
+    );
+
+    test('deletes a kos and refreshes the owner list', () async {
+      final kos = _sampleKos('kos-1', 'owner-1');
+      final repository = FakeKosRepository([kos]);
+      final provider = OwnerKosProvider(repository: repository);
+
+      final result = await provider.deleteKos(kos);
+
+      expect(result, isTrue);
+      expect(repository.deletedKosId, 'kos-1');
+      expect(repository.requestedPemilikId, 'owner-1');
+      expect(provider.state, OwnerKosState.loaded);
+      expect(provider.kosList, isEmpty);
+      expect(provider.isEmpty, isTrue);
+    });
+
+    test(
+      'maps an RLS delete failure to a friendly authorization error',
+      () async {
+        final kos = _sampleKos('kos-1', 'owner-1');
+        final repository = FakeKosRepository([kos])
+          ..deleteFailure = Exception(
+            'PostgrestException: permission denied for table kos (code: 42501)',
+          );
+        final provider = OwnerKosProvider(repository: repository);
+
+        final result = await provider.deleteKos(kos);
+
+        expect(result, isFalse);
+        expect(repository.deletedKosId, 'kos-1');
+        expect(provider.state, OwnerKosState.error);
+        expect(provider.hasError, isTrue);
+        expect(provider.errorMessage, 'Anda tidak berhak menghapus kos ini');
       },
     );
   });

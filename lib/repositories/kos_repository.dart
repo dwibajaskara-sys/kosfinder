@@ -95,7 +95,12 @@ class KosRepository {
   /// Menghapus data kos milik sendiri (US07-AC1, US07-AC2).
   Future<void> deleteKos(String kosId) async {
     try {
-      await _effectiveClient.from('kos').delete().eq('id', kosId);
+      await _effectiveClient
+          .from('kos')
+          .delete()
+          .eq('id', kosId)
+          .select('id')
+          .single();
     } catch (e) {
       throw Exception('Gagal menghapus kos: $e');
     }

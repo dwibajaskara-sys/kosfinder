@@ -38,6 +38,8 @@ class FakeKosRepository extends KosRepository {
 
   final List<Kos> ownerKosList;
   String? requestedPemilikId;
+  String? deletedKosId;
+  Object? deleteFailure;
 
   @override
   Future<List<Kos>> getOwnerKosList(String pemilikId) async {
@@ -47,6 +49,13 @@ class FakeKosRepository extends KosRepository {
 
   @override
   Future<List<Kos>> getPublicKosList() async => [];
+
+  @override
+  Future<void> deleteKos(String kosId) async {
+    deletedKosId = kosId;
+    if (deleteFailure case final error?) throw error;
+    ownerKosList.removeWhere((kos) => kos.id == kosId);
+  }
 }
 
 Kos _sampleKos(String id, String pemilikId, String nama) {
@@ -156,6 +165,86 @@ void main() {
 
       expect(authRepository.signOutCalls, 1);
       expect(find.byType(KosListScreen), findsOneWidget);
+    });
+
+    testWidgets('confirms deletion and calls the owner kos provider', (
+      tester,
+    ) async {
+      final authProvider = AuthProvider(repository: FakeAuthRepository());
+      final kosRepository = FakeKosRepository([
+        _sampleKos('kos-1', 'owner-1', 'Kos Melati'),
+      ]);
+      final ownerKosProvider = OwnerKosProvider(repository: kosRepository);
+      addTearDown(authProvider.dispose);
+      addTearDown(ownerKosProvider.dispose);
+
+      await _pumpDashboard(
+        tester,
+        authProvider: authProvider,
+        ownerKosProvider: ownerKosProvider,
+        kosRepository: kosRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('delete-kos-1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(
+        find.text('Hapus kos Kos Melati? Tindakan ini tidak bisa dibatalkan.'),
+        findsOneWidget,
+      );
+      expect(find.text('Batal'), findsOneWidget);
+      expect(find.text('Hapus'), findsNWidgets(2));
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Hapus'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(kosRepository.deletedKosId, 'kos-1');
+      expect(find.text('Kos berhasil dihapus'), findsOneWidget);
+      expect(find.text('Kos Melati'), findsNothing);
+    });
+
+    testWidgets('shows an authorization error when deletion is rejected', (
+      tester,
+    ) async {
+      final authProvider = AuthProvider(repository: FakeAuthRepository());
+      final kosRepository = FakeKosRepository([
+        _sampleKos('kos-1', 'owner-1', 'Kos Melati'),
+      ])..deleteFailure = Exception('permission denied for table kos (42501)');
+      final ownerKosProvider = OwnerKosProvider(repository: kosRepository);
+      addTearDown(authProvider.dispose);
+      addTearDown(ownerKosProvider.dispose);
+
+      await _pumpDashboard(
+        tester,
+        authProvider: authProvider,
+        ownerKosProvider: ownerKosProvider,
+        kosRepository: kosRepository,
+      );
+
+      await tester.tap(find.byKey(const Key('delete-kos-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Hapus'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(kosRepository.deletedKosId, 'kos-1');
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.text('Anda tidak berhak menghapus kos ini'),
+        ),
+        findsOneWidget,
+      );
     });
   });
 }

@@ -65,15 +65,36 @@ class OwnerKosProvider extends ChangeNotifier {
     } catch (error) {
       if (requestId != _requestId) return false;
       final message = error.toString();
-      final normalizedMessage = message.toLowerCase();
-      final isAuthorizationError =
-          normalizedMessage.contains('42501') ||
-          normalizedMessage.contains('pgrst116') ||
-          normalizedMessage.contains('permission denied') ||
-          normalizedMessage.contains('row-level security') ||
-          normalizedMessage.contains('row level security');
-      _errorMessage = isAuthorizationError
+      _errorMessage = _isAuthorizationError(error)
           ? 'Anda tidak berhak mengubah kos ini'
+          : message.replaceFirst('Exception: ', '');
+      _state = OwnerKosState.error;
+      notifyListeners();
+      return false;
+    }
+
+    if (requestId == _requestId) {
+      await fetchOwnerKosList(kos.pemilikId);
+    }
+    return true;
+  }
+
+  /// Menghapus kos milik sendiri lalu memuat ulang daftar pemilik.
+  Future<bool> deleteKos(Kos kos) async {
+    final requestId = ++_requestId;
+    _pemilikId = kos.pemilikId;
+    _state = OwnerKosState.loading;
+    _kosList = [];
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _repository.deleteKos(kos.id);
+    } catch (error) {
+      if (requestId != _requestId) return false;
+      final message = error.toString();
+      _errorMessage = _isAuthorizationError(error)
+          ? 'Anda tidak berhak menghapus kos ini'
           : message.replaceFirst('Exception: ', '');
       _state = OwnerKosState.error;
       notifyListeners();
@@ -107,5 +128,14 @@ class OwnerKosProvider extends ChangeNotifier {
     } finally {
       if (requestId == _requestId) notifyListeners();
     }
+  }
+
+  bool _isAuthorizationError(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('42501') ||
+        message.contains('pgrst116') ||
+        message.contains('permission denied') ||
+        message.contains('row-level security') ||
+        message.contains('row level security');
   }
 }
