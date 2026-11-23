@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../core/config/supabase_config.dart';
 import '../providers/kos_provider.dart';
 import '../widgets/filter_modal.dart';
 import '../widgets/kos_card.dart';
 import 'about_screen.dart';
 import 'kos_detail_screen.dart';
+import 'login_screen.dart';
 
 /// Layar utama penjelajahan, pencarian, dan penyaringan daftar kos publik (US01, US03).
 class KosListScreen extends StatefulWidget {
@@ -59,6 +61,24 @@ class _KosListScreenState extends State<KosListScreen> {
         ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.login),
+            tooltip: 'Login Pemilik',
+            onPressed: () {
+              if (!SupabaseConfig.isConfigured) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Login memerlukan konfigurasi Supabase.'),
+                  ),
+                );
+                return;
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.info_outline),
             tooltip: 'Tentang Aplikasi',
