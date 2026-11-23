@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
-import 'kos_list_screen.dart';
+import 'owner_dashboard_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -34,9 +34,9 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (!mounted || authProvider.user == null || authProvider.hasError) return;
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const KosListScreen()));
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const OwnerDashboardScreen()),
+    );
   }
 
   @override

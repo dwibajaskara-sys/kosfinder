@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/config/supabase_config.dart';
 import 'providers/auth_provider.dart';
 import 'providers/kos_provider.dart';
+import 'providers/owner_kos_provider.dart';
 import 'screens/kos_list_screen.dart';
 
 Future<void> main() async {
@@ -30,6 +31,7 @@ class KosFinderApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => KosProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => OwnerKosProvider()),
       ],
       child: MaterialApp(
         title: 'KosFinder',

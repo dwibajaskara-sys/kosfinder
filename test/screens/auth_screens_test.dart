@@ -5,10 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kosfinder/models/kos.dart';
 import 'package:kosfinder/providers/auth_provider.dart';
 import 'package:kosfinder/providers/kos_provider.dart';
+import 'package:kosfinder/providers/owner_kos_provider.dart';
 import 'package:kosfinder/repositories/auth_repository.dart';
 import 'package:kosfinder/repositories/kos_repository.dart';
 import 'package:kosfinder/screens/kos_list_screen.dart';
 import 'package:kosfinder/screens/login_screen.dart';
+import 'package:kosfinder/screens/owner_dashboard_screen.dart';
 import 'package:kosfinder/screens/register_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -63,6 +65,9 @@ class FakeAuthRepository extends AuthRepository {
 class FakeKosRepository extends KosRepository {
   @override
   Future<List<Kos>> getPublicKosList() async => [];
+
+  @override
+  Future<List<Kos>> getOwnerKosList(String pemilikId) async => [];
 }
 
 Future<void> _pumpAuthScreen(
@@ -76,6 +81,9 @@ Future<void> _pumpAuthScreen(
         ChangeNotifierProvider<AuthProvider>.value(value: authProvider),
         ChangeNotifierProvider(
           create: (_) => KosProvider(repository: FakeKosRepository()),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => OwnerKosProvider(repository: FakeKosRepository()),
         ),
       ],
       child: MaterialApp(home: screen),
@@ -142,7 +150,7 @@ void main() {
       },
     );
 
-    testWidgets('login calls provider and navigates to KosListScreen', (
+    testWidgets('login calls provider and navigates to owner dashboard', (
       tester,
     ) async {
       final repository = FakeAuthRepository();
@@ -169,7 +177,7 @@ void main() {
       expect(repository.signInCalls, 1);
       expect(repository.lastEmail, 'owner@example.com');
       expect(repository.lastPassword, 'password123');
-      expect(find.byType(KosListScreen), findsOneWidget);
+      expect(find.byType(OwnerDashboardScreen), findsOneWidget);
     });
 
     testWidgets('register calls provider with full name and navigates home', (
@@ -202,7 +210,7 @@ void main() {
 
       expect(repository.signUpCalls, 1);
       expect(repository.lastName, 'Pemilik Kos');
-      expect(find.byType(KosListScreen), findsOneWidget);
+      expect(find.byType(OwnerDashboardScreen), findsOneWidget);
     });
 
     testWidgets('kos list explains when Supabase is not configured', (
