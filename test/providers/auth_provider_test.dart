@@ -113,13 +113,14 @@ void main() {
     test(
       'signUp sends email, password, and full name as user metadata',
       () async {
-        final user = await repository.signUp(
+        final response = await repository.signUp(
           'owner@example.com',
           'password123',
           'Pemilik Kos',
         );
 
-        expect(user?.id, 'owner-1');
+        expect(response.user?.id, 'owner-1');
+        expect(response.session, isNull);
         expect(mockAuth.receivedEmail, 'owner@example.com');
         expect(mockAuth.receivedPassword, 'password123');
         expect(mockAuth.receivedSignUpData, {'nama': 'Pemilik Kos'});

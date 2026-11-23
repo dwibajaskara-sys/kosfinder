@@ -28,8 +28,22 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get hasError => _errorMessage != null;
 
-  Future<void> signUp(String email, String password, String nama) {
-    return _runAuthAction(() => _repository.signUp(email, password, nama));
+  Future<AuthResponse?> signUp(
+    String email,
+    String password,
+    String nama,
+  ) async {
+    _startLoading();
+    try {
+      final response = await _repository.signUp(email, password, nama);
+      _user = response.session?.user;
+      return response;
+    } catch (error) {
+      _errorMessage = _formatError(error);
+      return null;
+    } finally {
+      _finishLoading();
+    }
   }
 
   Future<void> signIn(String email, String password) {

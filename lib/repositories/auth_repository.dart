@@ -12,13 +12,12 @@ class AuthRepository {
   }
 
   /// Mendaftarkan pemilik dan menyimpan nama lengkap pada metadata user.
-  Future<User?> signUp(String email, String password, String nama) async {
-    final response = await _effectiveClient.auth.signUp(
+  Future<AuthResponse> signUp(String email, String password, String nama) {
+    return _effectiveClient.auth.signUp(
       email: email,
       password: password,
       data: {'nama': nama},
     );
-    return response.user;
   }
 
   /// Masuk menggunakan email dan password.

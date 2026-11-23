@@ -30,13 +30,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
-    await authProvider.signUp(
+    final response = await authProvider.signUp(
       _emailController.text.trim(),
       _passwordController.text,
       _nameController.text.trim(),
     );
 
-    if (!mounted || authProvider.user == null || authProvider.hasError) return;
+    if (!mounted || response == null || authProvider.hasError) return;
+    if (response.session == null) {
+      final messenger = ScaffoldMessenger.of(context);
+      final navigator = Navigator.of(context);
+      if (navigator.canPop()) {
+        navigator.pop();
+      } else {
+        navigator.pushReplacement(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Akun berhasil dibuat. Cek email Anda untuk konfirmasi sebelum login.',
+          ),
+        ),
+      );
+      return;
+    }
+    if (authProvider.user == null) return;
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const OwnerDashboardScreen()),
     );

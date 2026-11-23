@@ -22,6 +22,7 @@ class FakeAuthRepository extends AuthRepository {
   String? lastPassword;
   String? lastName;
   Object? failure;
+  bool signUpReturnsSession = true;
   Completer<User?>? signInCompleter;
   User? currentSession;
 
@@ -44,13 +45,26 @@ class FakeAuthRepository extends AuthRepository {
   }
 
   @override
-  Future<User?> signUp(String email, String password, String nama) async {
+  Future<AuthResponse> signUp(
+    String email,
+    String password,
+    String nama,
+  ) async {
     signUpCalls++;
     lastEmail = email;
     lastPassword = password;
     lastName = nama;
     if (failure case final error?) throw error;
-    return _user;
+    final user = _user;
+    final session = signUpReturnsSession
+        ? Session(
+            accessToken: 'test-access-token',
+            tokenType: 'bearer',
+            user: user,
+          )
+        : null;
+    currentSession = session?.user;
+    return AuthResponse(user: user, session: session);
   }
 
   User get _user => const User(
@@ -211,6 +225,47 @@ void main() {
       expect(repository.signUpCalls, 1);
       expect(repository.lastName, 'Pemilik Kos');
       expect(find.byType(OwnerDashboardScreen), findsOneWidget);
+    });
+
+    testWidgets('returns to login when signup needs email confirmation', (
+      tester,
+    ) async {
+      final repository = FakeAuthRepository()..signUpReturnsSession = false;
+      final authProvider = AuthProvider(repository: repository);
+      addTearDown(authProvider.dispose);
+
+      await _pumpAuthScreen(
+        tester,
+        screen: const LoginScreen(),
+        authProvider: authProvider,
+      );
+      await tester.tap(find.text('Belum punya akun? Daftar'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('register-name')),
+        'Pemilik Kos',
+      );
+      await tester.enterText(
+        find.byKey(const Key('register-email')),
+        'owner@example.com',
+      );
+      await tester.enterText(
+        find.byKey(const Key('register-password')),
+        'password123',
+      );
+      await tester.tap(find.text('Daftar'));
+      await tester.pumpAndSettle();
+
+      expect(repository.signUpCalls, 1);
+      expect(authProvider.user, isNull);
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(OwnerDashboardScreen), findsNothing);
+      expect(
+        find.text(
+          'Akun berhasil dibuat. Cek email Anda untuk konfirmasi sebelum login.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('kos list explains when Supabase is not configured', (
