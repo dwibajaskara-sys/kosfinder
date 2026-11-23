@@ -15,3 +15,15 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+## Cara Menjalankan
+
+1. Salin `dart_defines.example.json` menjadi `dart_defines.json`.
+2. Isi `SUPABASE_URL` dan `SUPABASE_ANON_KEY` di `dart_defines.json` dengan nilai asli dari dashboard Supabase.
+3. Jalankan aplikasi:
+
+   ```bash
+   flutter run --dart-define-from-file=dart_defines.json
+   ```
+
+Jangan commit `dart_defines.json`. File tersebut berisi konfigurasi lokal dan sudah diabaikan oleh Git.

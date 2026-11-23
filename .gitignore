@@ -52,3 +52,6 @@ app.*.map.json
 *.env
 .env*
 
+# Local Flutter compile-time configuration
+dart_defines.json
+
