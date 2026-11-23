@@ -9,14 +9,25 @@ class KosDetailScreen extends StatelessWidget {
 
   const KosDetailScreen({super.key, required this.kos});
 
-  void _copyContactToClipboard(BuildContext context) {
-    Clipboard.setData(ClipboardData(text: kos.kontakPemilik));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Nomor disalin'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+  Future<void> _copyContactToClipboard(BuildContext context) async {
+    try {
+      await Clipboard.setData(ClipboardData(text: kos.kontakPemilik));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nomor disalin'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal menyalin nomor'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override

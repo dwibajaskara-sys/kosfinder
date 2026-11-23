@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/kos.dart';
 
@@ -24,8 +27,12 @@ class KosRepository {
       return data.map((item) => Kos.fromMap(item as Map<String, dynamic>)).toList();
     } on PostgrestException catch (e) {
       throw Exception('Gagal memuat data kos: ${e.message}');
-    } catch (_) {
+    } on IOException {
       throw Exception('Gagal memuat data kos. Periksa koneksi internet Anda.');
+    } on TimeoutException {
+      throw Exception('Gagal memuat data kos. Periksa koneksi internet Anda.');
+    } catch (e) {
+      throw Exception('Gagal memuat data kos: $e');
     }
   }
 
@@ -56,8 +63,14 @@ class KosRepository {
 
       final List<dynamic> data = response as List<dynamic>;
       return data.map((item) => Kos.fromMap(item as Map<String, dynamic>)).toList();
-    } catch (_) {
-      throw Exception('Gagal memuat data kos pemilik. Periksa koneksi internet Anda.');
+    } on PostgrestException catch (e) {
+      throw Exception('Gagal memuat data kos: ${e.message}');
+    } on IOException {
+      throw Exception('Gagal memuat data kos. Periksa koneksi internet Anda.');
+    } on TimeoutException {
+      throw Exception('Gagal memuat data kos. Periksa koneksi internet Anda.');
+    } catch (e) {
+      throw Exception('Gagal memuat data kos: $e');
     }
   }
 

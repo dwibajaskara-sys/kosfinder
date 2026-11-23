@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../models/kos.dart';
 import '../repositories/kos_repository.dart';
 
@@ -17,6 +18,7 @@ class KosProvider extends ChangeNotifier {
   String _searchQuery = '';
   int? _maxPrice;
   List<String> _selectedFacilities = [];
+  int _requestId = 0;
 
   KosState get state => _state;
   List<Kos> get kosList => _kosList;
@@ -108,18 +110,22 @@ class KosProvider extends ChangeNotifier {
 
   /// Mengambil daftar kos publik dari Supabase (US01-AC1, US01-AC2, US01-AC3).
   Future<void> fetchKosList() async {
+    final requestId = ++_requestId;
     _state = KosState.loading;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _kosList = await _repository.getPublicKosList();
+      final kosList = await _repository.getPublicKosList();
+      if (requestId != _requestId) return;
+      _kosList = kosList;
       _state = KosState.loaded;
     } catch (e) {
+      if (requestId != _requestId) return;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
       _state = KosState.error;
     } finally {
-      notifyListeners();
+      if (requestId == _requestId) notifyListeners();
     }
   }
 }

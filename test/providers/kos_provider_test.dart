@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kosfinder/models/kos.dart';
 import 'package:kosfinder/providers/kos_provider.dart';
@@ -18,6 +20,17 @@ class FakeFailureKosRepository extends KosRepository {
   @override
   Future<List<Kos>> getPublicKosList() async {
     throw Exception('Gagal memuat data kos. Periksa koneksi internet Anda.');
+  }
+}
+
+class DelayedKosRepository extends KosRepository {
+  final List<Completer<List<Kos>>> requests = [];
+
+  @override
+  Future<List<Kos>> getPublicKosList() {
+    final request = Completer<List<Kos>>();
+    requests.add(request);
+    return request.future;
   }
 }
 
@@ -207,6 +220,40 @@ void main() {
       expect(provider.state, KosState.error);
       expect(provider.hasError, isTrue);
       expect(provider.errorMessage, contains('Gagal memuat data kos'));
+    });
+
+    test('fetchKosList keeps the newest result when requests complete out of order', () async {
+      final repository = DelayedKosRepository();
+      final provider = KosProvider(repository: repository);
+
+      final olderRequest = provider.fetchKosList();
+      final newerRequest = provider.fetchKosList();
+
+      repository.requests[1].complete([sampleKosList[1]]);
+      await newerRequest;
+      repository.requests[0].complete([sampleKosList[0]]);
+      await olderRequest;
+
+      expect(provider.state, KosState.loaded);
+      expect(provider.kosList, [sampleKosList[1]]);
+      expect(provider.errorMessage, isNull);
+    });
+
+    test('fetchKosList ignores errors from stale requests', () async {
+      final repository = DelayedKosRepository();
+      final provider = KosProvider(repository: repository);
+
+      final olderRequest = provider.fetchKosList();
+      final newerRequest = provider.fetchKosList();
+
+      repository.requests[1].complete([sampleKosList[1]]);
+      await newerRequest;
+      repository.requests[0].completeError(Exception('stale request failed'));
+      await olderRequest;
+
+      expect(provider.state, KosState.loaded);
+      expect(provider.kosList, [sampleKosList[1]]);
+      expect(provider.errorMessage, isNull);
     });
   });
 }
