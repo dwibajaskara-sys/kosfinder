@@ -26,6 +26,31 @@ class OwnerKosProvider extends ChangeNotifier {
   bool get hasError => _state == OwnerKosState.error;
   bool get isEmpty => _state == OwnerKosState.loaded && _kosList.isEmpty;
 
+  /// Membuat kos baru lalu memuat ulang daftar milik pemilik tersebut.
+  Future<bool> createKos(Kos kos) async {
+    final requestId = ++_requestId;
+    _pemilikId = kos.pemilikId;
+    _state = OwnerKosState.loading;
+    _kosList = [];
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _repository.createKos(kos);
+    } catch (error) {
+      if (requestId != _requestId) return false;
+      _errorMessage = error.toString().replaceFirst('Exception: ', '');
+      _state = OwnerKosState.error;
+      notifyListeners();
+      return false;
+    }
+
+    if (requestId == _requestId) {
+      await fetchOwnerKosList(kos.pemilikId);
+    }
+    return true;
+  }
+
   /// Mengambil kos berdasarkan ID pemilik agar daftar tetap terbatas ke akunnya.
   Future<void> fetchOwnerKosList(String pemilikId) async {
     final requestId = ++_requestId;

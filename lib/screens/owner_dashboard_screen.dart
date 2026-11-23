@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/owner_kos_provider.dart';
+import 'kos_form_screen.dart';
 import 'kos_list_screen.dart';
 
 class OwnerDashboardScreen extends StatefulWidget {
@@ -95,7 +96,11 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       floatingActionButton: user == null
           ? null
           : FloatingActionButton.extended(
-              onPressed: () => _showPlaceholder('tambah kos'),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const KosFormScreen()),
+                );
+              },
               icon: const Icon(Icons.add),
               label: const Text('Tambah Kos'),
             ),
