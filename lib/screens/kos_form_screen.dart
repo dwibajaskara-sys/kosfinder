@@ -7,7 +7,9 @@ import '../providers/auth_provider.dart';
 import '../providers/owner_kos_provider.dart';
 
 class KosFormScreen extends StatefulWidget {
-  const KosFormScreen({super.key});
+  const KosFormScreen({super.key, this.kosToEdit});
+
+  final Kos? kosToEdit;
 
   @override
   State<KosFormScreen> createState() => _KosFormScreenState();
@@ -31,6 +33,23 @@ class _KosFormScreenState extends State<KosFormScreen> {
   final Set<String> _selectedFacilities = {};
   String _status = 'Tersedia';
 
+  bool get _isEditing => widget.kosToEdit != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final kos = widget.kosToEdit;
+    if (kos == null) return;
+
+    _nameController.text = kos.nama;
+    _areaController.text = kos.area;
+    _priceController.text = kos.hargaPerBulan.toString();
+    _descriptionController.text = kos.deskripsi;
+    _contactController.text = kos.kontakPemilik;
+    _selectedFacilities.addAll(kos.fasilitas);
+    _status = kos.status;
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -52,10 +71,11 @@ class _KosFormScreenState extends State<KosFormScreen> {
       return;
     }
 
+    final existingKos = widget.kosToEdit;
     final kos = Kos(
-      id: '',
-      createdAt: DateTime.now(),
-      pemilikId: user.id,
+      id: existingKos?.id ?? '',
+      createdAt: existingKos?.createdAt ?? DateTime.now(),
+      pemilikId: existingKos?.pemilikId ?? user.id,
       nama: _nameController.text.trim(),
       area: _areaController.text.trim(),
       hargaPerBulan: int.parse(_priceController.text.trim()),
@@ -65,8 +85,11 @@ class _KosFormScreenState extends State<KosFormScreen> {
       status: _status,
     );
 
-    final created = await context.read<OwnerKosProvider>().createKos(kos);
-    if (!mounted || !created) return;
+    final provider = context.read<OwnerKosProvider>();
+    final saved = _isEditing
+        ? await provider.updateKos(kos)
+        : await provider.createKos(kos);
+    if (!mounted || !saved) return;
     Navigator.of(context).pop(true);
   }
 
@@ -75,7 +98,7 @@ class _KosFormScreenState extends State<KosFormScreen> {
     final ownerKosProvider = context.watch<OwnerKosProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tambah Kos')),
+      appBar: AppBar(title: Text(_isEditing ? 'Edit Kos' : 'Tambah Kos')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -203,7 +226,10 @@ class _KosFormScreenState extends State<KosFormScreen> {
                 if (ownerKosProvider.hasError) ...[
                   const SizedBox(height: 16),
                   Text(
-                    ownerKosProvider.errorMessage ?? 'Gagal menambahkan kos.',
+                    ownerKosProvider.errorMessage ??
+                        (_isEditing
+                            ? 'Gagal memperbarui kos.'
+                            : 'Gagal menambahkan kos.'),
                     key: const Key('kos-form-error'),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
@@ -223,7 +249,11 @@ class _KosFormScreenState extends State<KosFormScreen> {
                         )
                       : const Icon(Icons.save_outlined),
                   label: Text(
-                    ownerKosProvider.isLoading ? 'Menyimpan...' : 'Simpan Kos',
+                    ownerKosProvider.isLoading
+                        ? 'Menyimpan...'
+                        : _isEditing
+                        ? 'Simpan Perubahan'
+                        : 'Simpan Kos',
                   ),
                 ),
               ],

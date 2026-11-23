@@ -51,6 +51,41 @@ class OwnerKosProvider extends ChangeNotifier {
     return true;
   }
 
+  /// Updates one of the owner's kos and refreshes the owner's list.
+  Future<bool> updateKos(Kos kos) async {
+    final requestId = ++_requestId;
+    _pemilikId = kos.pemilikId;
+    _state = OwnerKosState.loading;
+    _kosList = [];
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _repository.updateKos(kos);
+    } catch (error) {
+      if (requestId != _requestId) return false;
+      final message = error.toString();
+      final normalizedMessage = message.toLowerCase();
+      final isAuthorizationError =
+          normalizedMessage.contains('42501') ||
+          normalizedMessage.contains('pgrst116') ||
+          normalizedMessage.contains('permission denied') ||
+          normalizedMessage.contains('row-level security') ||
+          normalizedMessage.contains('row level security');
+      _errorMessage = isAuthorizationError
+          ? 'Anda tidak berhak mengubah kos ini'
+          : message.replaceFirst('Exception: ', '');
+      _state = OwnerKosState.error;
+      notifyListeners();
+      return false;
+    }
+
+    if (requestId == _requestId) {
+      await fetchOwnerKosList(kos.pemilikId);
+    }
+    return true;
+  }
+
   /// Mengambil kos berdasarkan ID pemilik agar daftar tetap terbatas ke akunnya.
   Future<void> fetchOwnerKosList(String pemilikId) async {
     final requestId = ++_requestId;

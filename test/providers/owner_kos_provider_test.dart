@@ -11,12 +11,24 @@ class FakeKosRepository extends KosRepository {
   final List<Kos> kosList;
   String? requestedPemilikId;
   Object? failure;
+  Kos? updatedKos;
+  Object? updateFailure;
 
   @override
   Future<List<Kos>> getOwnerKosList(String pemilikId) async {
     requestedPemilikId = pemilikId;
     if (failure case final error?) throw error;
     return kosList.where((kos) => kos.pemilikId == pemilikId).toList();
+  }
+
+  @override
+  Future<Kos> updateKos(Kos kos) async {
+    updatedKos = kos;
+    if (updateFailure case final error?) throw error;
+
+    final index = kosList.indexWhere((item) => item.id == kos.id);
+    if (index >= 0) kosList[index] = kos;
+    return kos;
   }
 }
 
@@ -109,5 +121,45 @@ void main() {
       expect(provider.hasError, isTrue);
       expect(provider.errorMessage, 'Gagal memuat data kos pemilik.');
     });
+
+    test('updates a kos and refreshes the owner list', () async {
+      final originalKos = _sampleKos('kos-1', 'owner-1');
+      final repository = FakeKosRepository([originalKos]);
+      final provider = OwnerKosProvider(repository: repository);
+      final updatedKos = originalKos.copyWith(
+        hargaPerBulan: 950000,
+        status: 'Penuh',
+      );
+
+      final result = await provider.updateKos(updatedKos);
+
+      expect(result, isTrue);
+      expect(repository.updatedKos, same(updatedKos));
+      expect(repository.requestedPemilikId, 'owner-1');
+      expect(provider.state, OwnerKosState.loaded);
+      expect(provider.kosList.single.hargaPerBulan, 950000);
+      expect(provider.kosList.single.status, 'Penuh');
+    });
+
+    test(
+      'maps an RLS update failure to a friendly authorization error',
+      () async {
+        final repository = FakeKosRepository([_sampleKos('kos-1', 'owner-1')])
+          ..updateFailure = Exception(
+            'PostgrestException: new row violates row-level security policy '
+            '(code: 42501)',
+          );
+        final provider = OwnerKosProvider(repository: repository);
+
+        final result = await provider.updateKos(
+          _sampleKos('kos-1', 'owner-1').copyWith(nama: 'Kos diubah'),
+        );
+
+        expect(result, isFalse);
+        expect(provider.state, OwnerKosState.error);
+        expect(provider.hasError, isTrue);
+        expect(provider.errorMessage, 'Anda tidak berhak mengubah kos ini');
+      },
+    );
   });
 }

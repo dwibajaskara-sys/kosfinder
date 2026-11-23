@@ -31,6 +31,8 @@ class FakeKosRepository extends KosRepository {
   int createCalls = 0;
   String? requestedPemilikId;
   Object? createError;
+  Object? updateError;
+  Kos? updatedKos;
 
   @override
   Future<Kos> createKos(Kos kos) async {
@@ -47,6 +49,16 @@ class FakeKosRepository extends KosRepository {
   Future<List<Kos>> getOwnerKosList(String pemilikId) async {
     requestedPemilikId = pemilikId;
     return kosList.where((kos) => kos.pemilikId == pemilikId).toList();
+  }
+
+  @override
+  Future<Kos> updateKos(Kos kos) async {
+    updatedKos = kos;
+    if (updateError case final error?) throw error;
+
+    final index = kosList.indexWhere((item) => item.id == kos.id);
+    if (index >= 0) kosList[index] = kos;
+    return kos;
   }
 }
 
@@ -167,5 +179,100 @@ void main() {
         expect(find.text('Kos Mawar'), findsOneWidget);
       },
     );
+
+    testWidgets('edit mode opens with the existing kos values', (tester) async {
+      final existingKos = Kos(
+        id: 'kos-1',
+        createdAt: DateTime(2026),
+        pemilikId: 'owner-1',
+        nama: 'Kos Anggrek',
+        area: 'Singaraja',
+        hargaPerBulan: 900000,
+        deskripsi: 'Dekat kampus',
+        fasilitas: const ['WiFi', 'Parkir'],
+        kontakPemilik: '081234567890',
+        status: 'Penuh',
+      );
+      final repository = FakeKosRepository()..kosList.add(existingKos);
+      await _pumpOwnerDashboard(tester, kosRepository: repository);
+
+      await tester.tap(find.byKey(const Key('edit-kos-1')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit Kos'), findsOneWidget);
+      expect(find.text('Simpan Perubahan'), findsOneWidget);
+      expect(
+        tester
+            .widget<TextFormField>(find.byKey(const Key('kos-name')))
+            .controller!
+            .text,
+        'Kos Anggrek',
+      );
+      expect(
+        tester
+            .widget<TextFormField>(find.byKey(const Key('kos-area')))
+            .controller!
+            .text,
+        'Singaraja',
+      );
+      expect(
+        tester
+            .widget<TextFormField>(find.byKey(const Key('kos-price')))
+            .controller!
+            .text,
+        '900000',
+      );
+      expect(
+        tester
+            .widget<CheckboxListTile>(find.byKey(const Key('facility-WiFi')))
+            .value,
+        isTrue,
+      );
+      expect(
+        tester
+            .widget<CheckboxListTile>(find.byKey(const Key('facility-AC')))
+            .value,
+        isFalse,
+      );
+      expect(
+        tester
+            .widget<DropdownButtonFormField<String>>(
+              find.byKey(const Key('kos-status')),
+            )
+            .initialValue,
+        'Penuh',
+      );
+    });
+
+    testWidgets('shows an authorization error when an update is rejected', (
+      tester,
+    ) async {
+      final existingKos = Kos(
+        id: 'kos-1',
+        createdAt: DateTime(2026),
+        pemilikId: 'owner-1',
+        nama: 'Kos Anggrek',
+        area: 'Singaraja',
+        hargaPerBulan: 900000,
+        deskripsi: 'Dekat kampus',
+        fasilitas: const ['WiFi'],
+        kontakPemilik: '081234567890',
+        status: 'Tersedia',
+      );
+      final repository = FakeKosRepository()
+        ..kosList.add(existingKos)
+        ..updateError = Exception('permission denied for table kos (42501)');
+      await _pumpOwnerDashboard(tester, kosRepository: repository);
+
+      await tester.tap(find.byKey(const Key('edit-kos-1')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('kos-submit')));
+      await tester.tap(find.byKey(const Key('kos-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Anda tidak berhak mengubah kos ini'), findsOneWidget);
+      expect(repository.updatedKos?.id, 'kos-1');
+      expect(find.byType(KosFormScreen), findsOneWidget);
+    });
   });
 }

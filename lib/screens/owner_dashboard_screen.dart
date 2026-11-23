@@ -169,7 +169,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   children: [
                     TextButton.icon(
                       key: ValueKey('edit-${kos.id}'),
-                      onPressed: () => _showPlaceholder('edit kos'),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => KosFormScreen(kosToEdit: kos),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.edit_outlined),
                       label: const Text('Edit'),
                     ),
