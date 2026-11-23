@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/config/supabase_config.dart';
+import 'providers/kos_provider.dart';
+import 'screens/kos_list_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,20 +24,18 @@ class KosFinderApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'KosFinder',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
-      home: const Scaffold(
-        body: Center(
-          child: Text(
-            'KosFinder',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => KosProvider()),
+      ],
+      child: MaterialApp(
+        title: 'KosFinder',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+          useMaterial3: true,
         ),
+        home: const KosListScreen(),
       ),
     );
   }
