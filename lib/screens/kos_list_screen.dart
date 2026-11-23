@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/kos_provider.dart';
+import '../widgets/filter_modal.dart';
 import '../widgets/kos_card.dart';
 import 'about_screen.dart';
 import 'kos_detail_screen.dart';
 
-/// Layar utama penjelajahan dan pencarian daftar kos publik (US01, US03).
+/// Layar utama penjelajahan, pencarian, dan penyaringan daftar kos publik (US01, US03).
 class KosListScreen extends StatefulWidget {
   const KosListScreen({super.key});
 
@@ -30,8 +32,25 @@ class _KosListScreenState extends State<KosListScreen> {
     super.dispose();
   }
 
+  void _openFilterModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const FilterModal(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -130,43 +149,119 @@ class _KosListScreenState extends State<KosListScreen> {
             );
           }
 
-          // 4. Tampilan Data Normal / Hasil Pencarian (US01-AC1, US03-AC1, US03-AC4)
+          // 4. Tampilan Data Normal / Hasil Pencarian & Filter (US01-AC1, US03-AC1, AC2, AC3, AC4)
           final displayList = provider.filteredKosList;
 
           return Column(
             children: [
-              // Kolom Pencarian Area Case-Insensitive (US03-AC1)
+              // Baris Pencarian Area & Tombol Filter
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Cari berdasarkan area (misal: Singaraja)...',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              provider.clearSearchQuery();
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Cari area (misal: Singaraja)...',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    provider.clearSearchQuery();
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onChanged: (val) {
+                          provider.setSearchQuery(val);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Tombol Buka Modal Filter (US03-AC2, US03-AC3)
+                    Stack(
+                      children: [
+                        IconButton.filledTonal(
+                          icon: const Icon(Icons.tune_rounded),
+                          tooltip: 'Filter Kos',
+                          onPressed: () => _openFilterModal(context),
+                        ),
+                        if (provider.isFilterActive)
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(
+                                color: Colors.teal,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+              ),
+            ),
+
+              // Baris Ringkasan Filter Aktif (Chip Filter)
+              if (provider.isFilterActive)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        if (provider.maxPrice != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Chip(
+                              label: Text('Maks: ${currencyFormatter.format(provider.maxPrice)}'),
+                              deleteIcon: const Icon(Icons.close, size: 16),
+                              onDeleted: () => provider.setFilter(
+                                maxPrice: null,
+                                facilities: provider.selectedFacilities,
+                              ),
+                            ),
+                          ),
+                        ...provider.selectedFacilities.map(
+                          (facility) => Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Chip(
+                              label: Text(facility),
+                              deleteIcon: const Icon(Icons.close, size: 16),
+                              onDeleted: () {
+                                final updated = List<String>.from(provider.selectedFacilities)
+                                  ..remove(facility);
+                                provider.setFilter(
+                                  maxPrice: provider.maxPrice,
+                                  facilities: updated,
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => provider.clearFilter(),
+                          child: const Text('Hapus Filter'),
+                        ),
+                      ],
                     ),
                   ),
-                  onChanged: (val) {
-                    provider.setSearchQuery(val);
-                  },
                 ),
-              ),
 
-              // Jika pencarian tidak menemukan hasil (US03-AC4)
+              // Jika pencarian atau filter tidak menemukan hasil (US03-AC4)
               if (provider.isSearchEmpty)
                 Expanded(
                   child: Center(
@@ -194,9 +289,9 @@ class _KosListScreenState extends State<KosListScreen> {
                           TextButton(
                             onPressed: () {
                               _searchController.clear();
-                              provider.clearSearchQuery();
+                              provider.resetAll();
                             },
-                            child: const Text('Reset Pencarian'),
+                            child: const Text('Reset Semua'),
                           ),
                         ],
                       ),

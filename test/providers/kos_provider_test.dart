@@ -30,7 +30,7 @@ void main() {
       nama: 'Kos Mawar Indah',
       area: 'Singaraja',
       hargaPerBulan: 800000,
-      deskripsi: 'Deskripsi',
+      deskripsi: 'Deskripsi A',
       fasilitas: const ['WiFi', 'AC'],
       kontakPemilik: '081234567890',
       status: 'Tersedia',
@@ -41,11 +41,23 @@ void main() {
       pemilikId: 'owner-2',
       nama: 'Kos Kenanga',
       area: 'Denpasar Barat',
-      hargaPerBulan: 1200000,
-      deskripsi: 'Deskripsi',
-      fasilitas: const ['WiFi', 'Parkir'],
+      hargaPerBulan: 1500000,
+      deskripsi: 'Deskripsi B',
+      fasilitas: const ['WiFi', 'Parkir', 'Kamar Mandi Dalam'],
       kontakPemilik: '089876543210',
       status: 'Tersedia',
+    ),
+    Kos(
+      id: '3',
+      createdAt: DateTime.now(),
+      pemilikId: 'owner-3',
+      nama: 'Kos Melati Murah',
+      area: 'Singaraja',
+      hargaPerBulan: 600000,
+      deskripsi: 'Deskripsi C',
+      fasilitas: const ['Parkir', 'Listrik'],
+      kontakPemilik: '087777777777',
+      status: 'Penuh',
     ),
   ];
 
@@ -58,6 +70,9 @@ void main() {
       expect(provider.hasError, isFalse);
       expect(provider.kosList, isEmpty);
       expect(provider.searchQuery, isEmpty);
+      expect(provider.maxPrice, isNull);
+      expect(provider.selectedFacilities, isEmpty);
+      expect(provider.isFilterActive, isFalse);
     });
 
     test('fetchKosList transitions to loaded with data on success', () async {
@@ -70,8 +85,8 @@ void main() {
       expect(provider.state, KosState.loaded);
       expect(provider.isLoading, isFalse);
       expect(provider.hasError, isFalse);
-      expect(provider.kosList.length, 2);
-      expect(provider.filteredKosList.length, 2);
+      expect(provider.kosList.length, 3);
+      expect(provider.filteredKosList.length, 3);
       expect(provider.isEmpty, isFalse);
     });
 
@@ -82,21 +97,79 @@ void main() {
 
       await provider.fetchKosList();
 
-      // Cari 'singaraja' huruf kecil
+      // Cari 'singaraja' huruf kecil (ada 2: Kos Mawar Indah & Kos Melati Murah)
       provider.setSearchQuery('singaraja');
-      expect(provider.filteredKosList.length, 1);
-      expect(provider.filteredKosList.first.nama, 'Kos Mawar Indah');
-      expect(provider.isSearchEmpty, isFalse);
+      expect(provider.filteredKosList.length, 2);
 
       // Cari 'Singaraja' huruf kapital
       provider.setSearchQuery('Singaraja');
-      expect(provider.filteredKosList.length, 1);
-      expect(provider.filteredKosList.first.nama, 'Kos Mawar Indah');
+      expect(provider.filteredKosList.length, 2);
 
       // Cari 'SINGARAJA' huruf besar semua
       provider.setSearchQuery('SINGARAJA');
+      expect(provider.filteredKosList.length, 2);
+    });
+
+    test('Filter max price (US03-AC2)', () async {
+      final provider = KosProvider(
+        repository: FakeSuccessKosRepository(sampleKosList),
+      );
+
+      await provider.fetchKosList();
+
+      // Filter harga maksimal Rp1.000.000: hanya kos 1 (800rb) dan kos 3 (600rb) yang tampil
+      provider.setFilter(maxPrice: 1000000);
+      expect(provider.isFilterActive, isTrue);
+      expect(provider.filteredKosList.length, 2);
+      expect(provider.filteredKosList.any((k) => k.id == '2'), isFalse);
+
+      // Filter harga maksimal Rp700.000: hanya kos 3 (600rb) yang tampil
+      provider.setFilter(maxPrice: 700000);
+      expect(provider.filteredKosList.length, 1);
+      expect(provider.filteredKosList.first.id, '3');
+    });
+
+    test('Filter facilities requires all selected facilities (US03-AC3)', () async {
+      final provider = KosProvider(
+        repository: FakeSuccessKosRepository(sampleKosList),
+      );
+
+      await provider.fetchKosList();
+
+      // Filter fasilitas 'WiFi' (ada di kos 1 dan kos 2)
+      provider.setFilter(facilities: ['WiFi']);
+      expect(provider.filteredKosList.length, 2);
+
+      // Filter fasilitas 'WiFi' AND 'AC' (hanya ada di kos 1)
+      provider.setFilter(facilities: ['WiFi', 'AC']);
+      expect(provider.filteredKosList.length, 1);
+      expect(provider.filteredKosList.first.id, '1');
+
+      // Filter fasilitas 'AC' AND 'Parkir' (tidak ada kos yang memiliki keduanya)
+      provider.setFilter(facilities: ['AC', 'Parkir']);
+      expect(provider.filteredKosList, isEmpty);
+      expect(provider.isSearchEmpty, isTrue);
+    });
+
+    test('Combined search area, max price, and facility filter (US03)', () async {
+      final provider = KosProvider(
+        repository: FakeSuccessKosRepository(sampleKosList),
+      );
+
+      await provider.fetchKosList();
+
+      // Cari area Singaraja + maks harga Rp1.000.000 + fasilitas WiFi -> hanya kos 1
+      provider.setSearchQuery('Singaraja');
+      provider.setFilter(maxPrice: 1000000, facilities: ['WiFi']);
+
       expect(provider.filteredKosList.length, 1);
       expect(provider.filteredKosList.first.nama, 'Kos Mawar Indah');
+
+      // Reset semua
+      provider.resetAll();
+      expect(provider.filteredKosList.length, 3);
+      expect(provider.searchQuery, isEmpty);
+      expect(provider.isFilterActive, isFalse);
     });
 
     test('Search area with no matches returns empty filtered list and isSearchEmpty true (US03-AC4)', () async {
@@ -106,13 +179,13 @@ void main() {
 
       await provider.fetchKosList();
 
-      provider.setSearchQuery('Kuta');
+      provider.setSearchQuery('Gianyar');
       expect(provider.filteredKosList, isEmpty);
       expect(provider.isSearchEmpty, isTrue);
 
       // Reset search
       provider.clearSearchQuery();
-      expect(provider.filteredKosList.length, 2);
+      expect(provider.filteredKosList.length, 3);
       expect(provider.isSearchEmpty, isFalse);
     });
 

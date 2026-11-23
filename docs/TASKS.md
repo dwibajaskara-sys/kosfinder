@@ -19,7 +19,7 @@ Dokumen ini memuat daftar task terurut per *vertical slice* sesuai `docs/ARCHITE
 | ID | Tujuan | Story & AC Terkait | File yang Boleh Diubah | Cara Menguji | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **T06** | Implementasi pencarian area *case-insensitive* pada `KosProvider` dan search field di `KosListScreen` | US03-AC1, US03-AC4 | `lib/providers/kos_provider.dart`, `lib/screens/kos_list_screen.dart`, `test/providers/kos_provider_test.dart` | Cari "singaraja" dan "Singaraja" hasil sama; cari kata sembarang cek pesan kosong | [x] Selesai |
-| **T07** | Implementasi filter harga maksimum ($\le$ input) dan filter fasilitas tetap pada `KosProvider` & UI modal | US03-AC2, US03-AC3, US03-AC4 | `lib/providers/kos_provider.dart`, `lib/widgets/filter_modal.dart`, `lib/screens/kos_list_screen.dart`, `test/providers/kos_provider_test.dart` | Set filter maks Rp1.000.000 & centang WiFi, cek hanya kos yang cocok yang tampil | [ ] Belum |
+| **T07** | Implementasi filter harga maksimum ($\le$ input) dan filter fasilitas tetap pada `KosProvider` & UI modal | US03-AC2, US03-AC3, US03-AC4 | `lib/providers/kos_provider.dart`, `lib/widgets/filter_modal.dart`, `lib/screens/kos_list_screen.dart`, `test/providers/kos_provider_test.dart` | Set filter maks Rp1.000.000 & centang WiFi, cek hanya kos yang cocok yang tampil | [x] Selesai |
 
 ---
 
